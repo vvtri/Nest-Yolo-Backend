@@ -5,7 +5,6 @@ import {
 	UseInterceptors,
 } from '@nestjs/common'
 import { plainToClass } from 'class-transformer'
-import { Interface } from 'readline'
 import { map, Observable } from 'rxjs'
 
 interface ClassConstructor {

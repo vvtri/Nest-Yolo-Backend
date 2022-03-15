@@ -1,5 +1,4 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import { InjectRepository } from '@nestjs/typeorm'
 import { ExtractJwt, Strategy } from 'passport-jwt'
@@ -8,23 +7,29 @@ import { AuthService } from './auth.service'
 import { JwtPayload } from './interfaces/jwt-payload.interface'
 import { User } from './entities/user.entity'
 import { UserService } from './user.service'
+import { Request } from 'express'
+
+const cookieExtractor = function (req: any) {
+	let token = null
+	if (req && req.cookies) {
+		token = req.cookies['jwt']
+	}
+	return token
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-	constructor(
-		private configService: ConfigService,
-		@InjectRepository(User) private userRepo: Repository<User>
-	) {
+	constructor(@InjectRepository(User) private userRepo: Repository<User>) {
 		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-			secretOrKey: configService.get<string>('JWT_SECRET'),
+			jwtFromRequest: cookieExtractor,
+			secretOrKey: process.env.JWT_SECRET,
 		})
 	}
 
 	async validate(payload: JwtPayload) {
-		const { email } = payload
+		const { userId } = payload
 
-		const user = this.userRepo.findOne({ email })
+		const user = this.userRepo.findOne({ id: userId })
 
 		if (!user) throw new UnauthorizedException('invalid token')
 

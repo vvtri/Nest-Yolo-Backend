@@ -2,13 +2,13 @@ import {
 	BadRequestException,
 	Injectable,
 	InternalServerErrorException,
+	UnauthorizedException,
 } from '@nestjs/common'
 import { AuthCredentialsDto } from './dtos/authCredentials.dto'
 import { UserService } from './user.service'
 import * as bcrypt from 'bcrypt'
 import { JwtService } from '@nestjs/jwt'
 import { JwtPayload } from './interfaces/jwt-payload.interface'
-import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import { User } from './entities/user.entity'
 import { Connection, Repository } from 'typeorm'
@@ -25,7 +25,6 @@ export class AuthService {
 		@InjectRepository(UserVefification)
 		private userVerificationRepo: Repository<UserVefification>,
 		private jwtService: JwtService,
-		private configService: ConfigService,
 		private connection: Connection,
 		private mailService: MailService
 	) {}
@@ -35,12 +34,15 @@ export class AuthService {
 
 		const user = await this.userRepo.findOne({ email })
 
+		if (!user.verified)
+			throw new UnauthorizedException('Email is not verified')
+
 		if (user && bcrypt.compareSync(password, user.password)) {
-			const payload: JwtPayload = { email }
+			const payload: JwtPayload = { userId: user.id }
 
 			const accessToken = this.jwtService.sign(payload, {
-				secret: this.configService.get<string>('JWT_SECRET'),
-				expiresIn: 3600 * 3,
+				secret: process.env.JWT_SECRET,
+				expiresIn: parseInt(process.env.COOKIE_EXPIRED),
 			})
 
 			return { accessToken, ...user }
@@ -59,30 +61,7 @@ export class AuthService {
 
 		try {
 			await this.userRepo.save(user)
-
-			// create and hash secret string
-			const secretString: string = uuid() + user.id.toString()
-			const hashedSecretString = bcrypt.hashSync(secretString, 10)
-
-			const userVerification = this.userVerificationRepo.create({
-				secretString: hashedSecretString,
-				user,
-				// Expired after 6 hours
-				expiredAt: new Date(Date.now() + 21600000),
-			})
-
-			// Save user and send verify mail to user
-			const link = `http://localhost:3000/auth/verify/${user.id}/${secretString}`
-
-			await Promise.all([
-				this.userVerificationRepo.save(userVerification),
-				this.mailService.sendVerificationEmail({
-					from: 'test',
-					to: email,
-					link,
-				}),
-			])
-
+			await this.sendVerifyEmail(email)
 			return { ...user }
 		} catch (error) {
 			throw new BadRequestException('Email in use')
@@ -106,7 +85,7 @@ export class AuthService {
 		await queryRunner.startTransaction()
 		try {
 			// Update user and delete user verification
-			const result = await Promise.all([
+			await Promise.all([
 				queryRunner.manager.update(
 					User,
 					{ id: userId },
@@ -118,11 +97,52 @@ export class AuthService {
 			])
 
 			await queryRunner.commitTransaction()
+
+			const payload: JwtPayload = { userId }
+
+			const accessToken = this.jwtService.sign(payload, {
+				secret: process.env.JWT_SECRET,
+				expiresIn: parseInt(process.env.COOKIE_EXPIRED),
+			})
+
+			return { accessToken }
 		} catch (error) {
 			await queryRunner.rollbackTransaction()
 			throw new InternalServerErrorException()
 		} finally {
 			await queryRunner.release()
 		}
+	}
+
+	async sendVerifyEmail(email: string) {
+		const user = await this.userRepo.findOne({ email })
+
+		if (!user || user.verified)
+			throw new BadRequestException('User not found or was verified')
+
+		// create and hash secret string
+		const secretString = uuid() + user.id.toString()
+		const hashedSecretString = bcrypt.hashSync(secretString, 10)
+
+		// Delete all user verification
+		await this.userVerificationRepo.delete({ userId: user.id })
+
+		// Create new user verification
+		const userVerification = this.userVerificationRepo.create({
+			secretString: hashedSecretString,
+			user,
+			// Expired after 6 hours
+			expiredAt: new Date(Date.now() + 21600000),
+		})
+
+		const link = `http://localhost:3000/auth/verify/${user.id}/${secretString}`
+		await Promise.all([
+			this.userVerificationRepo.save(userVerification),
+			this.mailService.sendVerificationEmail({
+				from: 'Yolo-Shop',
+				to: email,
+				link: link,
+			}),
+		])
 	}
 }

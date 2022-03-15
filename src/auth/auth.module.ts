@@ -6,20 +6,19 @@ import { User } from './entities/user.entity'
 import { AuthService } from './auth.service'
 import { PassportModule } from '@nestjs/passport'
 import { JwtModule } from '@nestjs/jwt'
-import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtStrategy } from './jwt.strategy'
 import { UserVefification } from './entities/userVerification.entity'
 import { MailModule } from '../mail/mail.module'
+import { UserResetPassword } from './entities/userResetpassword.entity'
 
 @Module({
 	imports: [
-		ConfigModule,
 		MailModule,
 		PassportModule.register({
 			defaultStrategy: 'jwt',
 		}),
 		JwtModule.register({}),
-		TypeOrmModule.forFeature([User, UserVefification]),
+		TypeOrmModule.forFeature([User, UserVefification, UserResetPassword]),
 	],
 	providers: [UserService, AuthService, JwtStrategy],
 	controllers: [AuthController],

@@ -1,38 +1,15 @@
-import { Module, ValidationPipe } from '@nestjs/common'
+import { MiddlewareConsumer, Module, ValidationPipe } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { AuthModule } from './auth/auth.module'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { User } from './auth/entities/user.entity'
 import { APP_PIPE } from '@nestjs/core'
-import { MailerModule } from '@nestjs-modules/mailer'
+import { ProductsModule } from './products/products.module'
+import config from '../ormconfig'
+import * as cookieParser from 'cookie-parser'
 
 @Module({
-	imports: [
-		ConfigModule.forRoot({
-			envFilePath: '.env.development',
-			isGlobal: true,
-		}),
-		TypeOrmModule.forRootAsync({
-			imports: [ConfigModule],
-			inject: [ConfigService],
-			useFactory: (configService: ConfigService) => {
-				return {
-					type: 'postgres',
-					host: configService.get<string>('DB_HOST'),
-					port: configService.get<number>('DB_PORT'),
-					username: configService.get<string>('DB_USERNAME'),
-					password: configService.get<string>('DB_PASSWORD'),
-					database: configService.get<string>('DB_DATABASE'),
-					// entities: [User],
-					autoLoadEntities: true,
-					synchronize: true,
-				}
-			},
-		}),
-		AuthModule,
-	],
+	imports: [TypeOrmModule.forRoot(config), AuthModule, ProductsModule],
 	controllers: [AppController],
 	providers: [
 		AppService,
@@ -44,4 +21,9 @@ import { MailerModule } from '@nestjs-modules/mailer'
 		},
 	],
 })
-export class AppModule {}
+export class AppModule {
+	configure(comsumer: MiddlewareConsumer) {
+      // Use cookie middleware
+		comsumer.apply(cookieParser()).forRoutes('*')
+	}
+}

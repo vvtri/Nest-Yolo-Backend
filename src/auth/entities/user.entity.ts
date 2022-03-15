@@ -6,6 +6,8 @@ import {
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from 'typeorm'
+import { UserResetPassword } from './userResetpassword.entity'
+import { UserVefification } from './userVerification.entity'
 
 @Entity()
 export class User {
@@ -49,4 +51,16 @@ export class User {
 
 	@UpdateDateColumn()
 	updatedAt: Date
+
+	@OneToOne(
+		() => UserVefification,
+		(userVerification) => userVerification.user
+	)
+	userVerification: UserVefification
+
+	@OneToOne(
+		() => UserVefification,
+		(userResetPassword) => userResetPassword.user
+	)
+	userResetPassword: UserResetPassword
 }

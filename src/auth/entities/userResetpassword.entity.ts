@@ -9,18 +9,12 @@ import {
 import { User } from './user.entity'
 
 @Entity()
-export class UserVefification {
+export class UserResetPassword {
 	@PrimaryGeneratedColumn()
 	id: number
 
-	@OneToOne(() => User, (user) => user.userVerification, {
-		onDelete: 'CASCADE',
-	})
-	@JoinColumn()
-	user: User
-
 	@Column()
-	userId: number
+	email: string
 
 	@Column()
 	secretString: string
@@ -30,4 +24,13 @@ export class UserVefification {
 
 	@Column()
 	expiredAt: Date
+
+	@OneToOne(() => User, (user) => user.userResetPassword, {
+		onDelete: 'CASCADE',
+	})
+	@JoinColumn()
+	user: User
+
+	@Column()
+	userId: number
 }

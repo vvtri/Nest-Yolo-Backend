@@ -12,36 +12,41 @@ import { v4 as uuid } from 'uuid'
 import * as bcrypt from 'bcrypt'
 import { MailService } from 'src/mail/mail.service'
 import { ResetPasswordDto } from './dtos/resetPassword.dto'
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service'
+import { UserRepository } from './user.repository'
 
 @Injectable()
 export class UserService {
 	constructor(
-		@InjectRepository(User) private userRepo: Repository<User>,
+		@InjectRepository(UserRepository) private userRepo: UserRepository,
 		@InjectRepository(UserResetPassword)
 		private userResetPasswordRepo: Repository<UserResetPassword>,
-		private mailService: MailService
+		private mailService: MailService,
+		private cloudinaryService: CloudinaryService
 	) {}
 
-	changeUserInfo(changeInfoUserDto: ChangeInfoUserDto, user: User) {
+	async changeUserInfo(
+		changeInfoUserDto: ChangeInfoUserDto,
+		user: User
+	): Promise<User> {
 		const { address, avatar, name, phone } = changeInfoUserDto
 
-		if (address) {
-			user.address = address
-		}
-
 		if (avatar) {
-			user.avatar = avatar
+			try {
+				const public_id = await this.cloudinaryService.uploadImage(avatar)
+				user.avatar = public_id
+			} catch (error) {
+				console.log(error)
+			}
 		}
 
-		if (name) {
-			user.name = name
-		}
+		if (address) user.address = address
 
-		if (phone) {
-			user.name = name
-		}
+		if (name) user.name = name
 
-		return this.userRepo.save(user)
+		if (phone) user.name = name
+
+		return await this.userRepo.save(user)
 	}
 
 	async requestResetPassword(email: string) {
@@ -64,7 +69,7 @@ export class UserService {
 		})
 
 		try {
-			const link = `/auth/reset/${user.id}/${secretString}`
+			const link = `http://localhost:3000/api/auth/reset/${user.id}/${secretString}`
 			await Promise.all([
 				this.userResetPasswordRepo.save(userResetpassword),
 				this.mailService.sendResetPasswordEmail({
@@ -95,7 +100,7 @@ export class UserService {
 			await Promise.all([
 				this.userRepo.update(
 					{ id: userId },
-					{ password: hashedNewPassword }
+					{ password: hashedNewPassword, verified: true }
 				),
 				this.userResetPasswordRepo.delete({ userId }),
 			])

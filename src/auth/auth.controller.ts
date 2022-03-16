@@ -3,6 +3,7 @@ import {
 	Body,
 	Controller,
 	Get,
+	HttpCode,
 	Param,
 	Patch,
 	Post,
@@ -12,15 +13,15 @@ import {
 import { AuthGuard } from '@nestjs/passport'
 import { isEmail } from 'class-validator'
 import { Response } from 'express'
-import { GetUser } from 'src/decorators/getUser.decorator'
-import { Serialize } from 'src/interceptors/serialize.interceptor'
+import { GetAuth } from 'src/common/decorators/getAuth.decorator'
+import { DataAfterValidateType } from 'src/common/types'
+import { Serialize } from 'src/common/interceptors/serialize.interceptor'
 import { AuthService } from './auth.service'
 import { AuthCredentialsDto } from './dtos/authCredentials.dto'
 import { ChangeInfoUserDto } from './dtos/changeInfoUser.dto'
 import { ResetPasswordDto } from './dtos/resetPassword.dto'
 import { UserDto } from './dtos/user.dto'
 import { VerifyUserDto } from './dtos/verifyUser.dto'
-import { User } from './entities/user.entity'
 import { UserService } from './user.service'
 
 @Controller('auth')
@@ -45,24 +46,27 @@ export class AuthController {
 
 	@Get('/verify/:userId/:secretString')
 	async verify(@Param() params: VerifyUserDto, @Res() res: Response) {
-		try {
-			const { accessToken } = await this.authService.verifyUser(params)
-			res.cookie('jwt', accessToken, {
-				maxAge: parseInt(process.env.COOKIE_EXPIRED) * 1000,
-			}).sendStatus(200)
-		} catch (error) {
-			return error.toString()
-		}
+		res.send(await this.authService.verifyUser(params, res))
 	}
 
 	@Post('/signin')
 	async signIn(@Body() body: AuthCredentialsDto, @Res() res: Response) {
-		const { accessToken, ...rest } = await this.authService.signIn(body)
-		res.cookie('jwt', accessToken, {
-			maxAge: parseInt(process.env.COOKIE_EXPIRED) * 1000,
-		}).send({
-			...rest,
-		})
+		res.send(await this.authService.signIn(body, res))
+	}
+
+	@Post('/logout')
+	@UseGuards(AuthGuard('jwtClient'))
+	async logOut(@GetAuth() data: DataAfterValidateType, @Res() res: Response) {
+		await this.authService.logOut(data.user, res)
+		res.sendStatus(200)
+	}
+
+	@Post('/refresh')
+	@UseGuards(AuthGuard('jwtRefresh'))
+	@HttpCode(200)
+	refresh(@GetAuth() data: DataAfterValidateType, @Res() res: Response) {
+		this.authService.refresh(data, res)
+		res.send('success')
 	}
 
 	@Post('/request-reset')
@@ -82,8 +86,21 @@ export class AuthController {
 	}
 
 	@Patch('/change-info')
-	@UseGuards(AuthGuard())
-	changeUserInfo(@Body() body: ChangeInfoUserDto, @GetUser() user: User) {
+	// User jwtClient Strategy
+	@UseGuards(AuthGuard('jwtClient'))
+	changeUserInfo(
+		@Body() body: ChangeInfoUserDto,
+		@GetAuth() data: DataAfterValidateType
+	) {
+		const { user } = data
 		return this.userService.changeUserInfo(body, user)
+	}
+
+	@Get('/test')
+	@UseGuards(AuthGuard('jwtClient'))
+	test(@GetAuth() data: DataAfterValidateType) {
+		const { user, refreshToken } = data
+		console.log({ refreshToken })
+		return 'success'
 	}
 }

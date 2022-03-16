@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator'
+import { IsBase64, IsOptional, IsString } from 'class-validator'
 
 export class ChangeInfoUserDto {
 	@IsOptional()

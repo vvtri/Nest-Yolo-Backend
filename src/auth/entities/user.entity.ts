@@ -1,12 +1,15 @@
+import { IsEmail, IsPhoneNumber } from 'class-validator'
 import {
 	Column,
 	CreateDateColumn,
 	Entity,
+	OneToMany,
 	OneToOne,
 	PrimaryGeneratedColumn,
 	UpdateDateColumn,
 } from 'typeorm'
 import { UserResetPassword } from './userResetpassword.entity'
+import { UserRole } from './userRole.entity'
 import { UserVefification } from './userVerification.entity'
 
 @Entity()
@@ -14,7 +17,8 @@ export class User {
 	@PrimaryGeneratedColumn()
 	id: number
 
-	@Column()
+	@Column({ unique: true })
+	@IsEmail()
 	email: string
 
 	@Column()
@@ -28,6 +32,7 @@ export class User {
 	@Column({
 		nullable: true,
 	})
+	@IsPhoneNumber()
 	phone: string
 
 	@Column({
@@ -46,10 +51,13 @@ export class User {
 	})
 	name: string
 
-	@CreateDateColumn()
+	@Column({ nullable: true })
+	refreshToken: string
+
+	@CreateDateColumn({ type: 'timestamptz' })
 	createdAt: Date
 
-	@UpdateDateColumn()
+	@UpdateDateColumn({ type: 'timestamptz' })
 	updatedAt: Date
 
 	@OneToOne(
@@ -63,4 +71,7 @@ export class User {
 		(userResetPassword) => userResetPassword.user
 	)
 	userResetPassword: UserResetPassword
+
+	@OneToMany(() => UserRole, (roles) => roles.user)
+	userRoles: UserRole[]
 }

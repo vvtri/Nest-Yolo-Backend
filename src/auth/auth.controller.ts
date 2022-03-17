@@ -23,6 +23,7 @@ import { ResetPasswordDto } from './dtos/resetPassword.dto'
 import { UserDto } from './dtos/user.dto'
 import { VerifyUserDto } from './dtos/verifyUser.dto'
 import { UserService } from './user.service'
+import { ClientGuard, RefreshTokenGuard } from 'src/common/guards'
 
 @Controller('auth')
 @Serialize(UserDto)
@@ -55,14 +56,14 @@ export class AuthController {
 	}
 
 	@Post('/logout')
-	@UseGuards(AuthGuard('jwtClient'))
+	@UseGuards(ClientGuard)
 	async logOut(@GetAuth() data: DataAfterValidateType, @Res() res: Response) {
 		await this.authService.logOut(data.user, res)
 		res.sendStatus(200)
 	}
 
 	@Post('/refresh')
-	@UseGuards(AuthGuard('jwtRefresh'))
+	@UseGuards(RefreshTokenGuard)
 	@HttpCode(200)
 	refresh(@GetAuth() data: DataAfterValidateType, @Res() res: Response) {
 		this.authService.refresh(data, res)
@@ -87,7 +88,7 @@ export class AuthController {
 
 	@Patch('/change-info')
 	// User jwtClient Strategy
-	@UseGuards(AuthGuard('jwtClient'))
+	@UseGuards(ClientGuard)
 	changeUserInfo(
 		@Body() body: ChangeInfoUserDto,
 		@GetAuth() data: DataAfterValidateType
@@ -97,7 +98,7 @@ export class AuthController {
 	}
 
 	@Get('/test')
-	@UseGuards(AuthGuard('jwtClient'))
+	@UseGuards(ClientGuard)
 	test(@GetAuth() data: DataAfterValidateType) {
 		const { user, refreshToken } = data
 		console.log({ refreshToken })

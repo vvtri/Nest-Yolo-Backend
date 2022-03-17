@@ -94,27 +94,13 @@ export class ProductRepo extends Repository<Product> {
 
 		if (amount != undefined) Object.assign(updateObj, { amount })
 
-		let affected: number = 0
-
-		try {
-			const result = await this.update(id, updateObj)
-			affected = result.affected
-		} catch (error) {
-			throw new InternalServerErrorException(error)
-		}
+		const { affected } = await this.update(id, updateObj)
 
 		if (affected === 0) throw new BadRequestException('Product not found')
 	}
 
 	async deleteProduct(id: number) {
-		let affected = 0
-
-		try {
-			const reuslt = await this.delete(id)
-			affected = reuslt.affected
-		} catch (error) {
-			throw new InternalServerErrorException(error)
-		}
+		const { affected } = await this.delete(id)
 
 		if (affected === 0) throw new BadRequestException('Product not found')
 	}

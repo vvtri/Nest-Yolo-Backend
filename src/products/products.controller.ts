@@ -25,11 +25,13 @@ export class ProductsController {
 	}
 
 	@Post()
+	@UseGuards(AdminGuard)
 	addProduct(@Body() addProductDto: AddProductDto) {
 		return this.productService.addProduct(addProductDto)
 	}
 
 	@Patch()
+	@UseGuards(AdminGuard)
 	async editProduct(@Body() editProductDto: EditProductDto) {
 		await this.productService.editProduct(editProductDto)
 	}

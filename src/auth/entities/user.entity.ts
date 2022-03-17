@@ -1,4 +1,6 @@
 import { IsEmail, IsPhoneNumber } from 'class-validator'
+import { Cart } from 'src/cart/cart.entity'
+import { Order } from 'src/order/entities/order.entity'
 import {
 	Column,
 	CreateDateColumn,
@@ -74,4 +76,10 @@ export class User {
 
 	@OneToMany(() => UserRole, (roles) => roles.user)
 	userRoles: UserRole[]
+
+	@OneToMany(() => Cart, (cart) => cart.user)
+	carts: Cart[]
+
+	@OneToMany(() => Order, (order) => order.user)
+	orders: Order[]
 }

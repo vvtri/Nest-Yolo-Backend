@@ -28,9 +28,13 @@ export class UserDto {
 	@Expose()
 	verified: boolean
 
-	@Expose()
+	// Exclude
+	@Exclude()
 	accessToken: string
 
 	@Exclude()
 	password: string
+
+	@Exclude()
+	refreshToken: string
 }

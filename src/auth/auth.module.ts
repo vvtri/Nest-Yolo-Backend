@@ -24,7 +24,7 @@ import { UserRepository } from './user.repository'
 		JwtModule.register({}),
 		TypeOrmModule.forFeature([
 			UserRepository,
-			UserVefification,
+			UserVefification, 
 			UserResetPassword,
 			UserRole,
 		]),
